@@ -139,23 +139,25 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
     Scoring Logic Design (informed by songs.csv analysis):
     -------------------------------------------------------
-    Rule 1  +2.0 pts  Genre match
-            Rationale: genre is the strongest signal — it defines the sonic
-            universe (rock vs. jazz vs. lofi). Weighted 2× mood because a
-            wrong genre almost always means a wrong recommendation.
+    Rule 1  +1.0 pts  Genre match
+            Rationale: genre is the strongest categorical signal — it defines
+            the sonic universe (rock vs. jazz vs. lofi). Reduced from 2.0 to
+            1.0 in the Weight Shift experiment to give continuous features
+            more influence when genre labels are absent or mixed.
 
     Rule 2  +1.0 pt   Mood match
             Rationale: mood is a modifier within a genre. "Happy pop" and
             "moody pop" share production style but feel very different.
-            Half the genre weight keeps it influential without overriding
+            Equal weight to genre keeps it influential without overriding
             continuous features when genre is absent.
 
-    Rule 3  up to +1.0 pt  Energy similarity
-            Formula: (1 - |target_energy - song_energy|) * 1.0
+    Rule 3  up to +2.0 pt  Energy similarity
+            Formula: (1 - |target_energy - song_energy|) * 2.0
             Rationale: energy is the single best continuous discriminator.
             It separates "intense rock" (≈0.91) from "chill lofi" (≈0.40)
             with a 0.51-point gap even when genre/mood labels don't match.
-            Equal weight to mood means the vibe matters as much as the label.
+            Doubled weight (vs. original 1.0) so the vibe signal can
+            dominate when categorical labels are ambiguous.
 
     Rule 4  up to +0.5 pt  Acousticness similarity
             Formula: (1 - |target_acousticness - song_acousticness|) * 0.5
@@ -169,15 +171,15 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
             over 0–200 BPM so a 50-BPM miss costs 0.125 pts — noticeable
             but not decisive.
 
-    Maximum possible score: 2.0 + 1.0 + 1.0 + 0.5 + 0.5 = 5.0 pts
+    Maximum possible score: 1.0 + 1.0 + 2.0 + 0.5 + 0.5 = 5.0 pts
     """
     score = 0.0
     reasons: List[str] = []
 
-    # Rule 1 — Genre match (+2.0)
+    # Rule 1 — Genre match (+1.0)
     if song["genre"] == user_prefs.get("favorite_genre"):
-        score += 2.0
-        reasons.append("genre match (+2.0)")
+        score += 1.0
+        reasons.append("genre match (+1.0)")
     else:
         reasons.append(f"genre mismatch — song is {song['genre']} (+0.0)")
 
@@ -188,10 +190,10 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     else:
         reasons.append(f"mood mismatch — song is {song['mood']} (+0.0)")
 
-    # Rule 3 — Energy similarity (up to +1.0)
-    # Formula: (1 - |target_energy - song_energy|) * 1.0
+    # Rule 3 — Energy similarity (up to +2.0)
+    # Formula: (1 - |target_energy - song_energy|) * 2.0
     if "target_energy" in user_prefs:
-        energy_pts = (1.0 - abs(user_prefs["target_energy"] - song["energy"])) * 1.0
+        energy_pts = (1.0 - abs(user_prefs["target_energy"] - song["energy"])) * 2.0
         score += energy_pts
         reasons.append(f"energy similarity (+{energy_pts:.2f})")
 
