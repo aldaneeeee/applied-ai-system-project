@@ -1,269 +1,471 @@
-# 🎵 Music Recommender Simulation
+# VibeScore 1.0 — AI Music Recommender System
 
-## Project Summary
-
-In this project you will build and explain a small music recommender system.
-
-Your goal is to:
-
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
-
-Replace this paragraph with your own summary of what your version does.
+> Final project for the **CodePath Applied AI Course**
 
 ---
 
-## How The System Works
+## Title & Summary
 
-### Song Features
+**VibeScore 1.0** is a rule-based music recommendation engine that scores every song in a
+curated catalog against a listener's stated preferences and returns the top five most relevant
+tracks — with a transparent, per-rule explanation of why each song ranked where it did.
 
-Each song in `data/songs.csv` is described by nine features:
+This project matters because recommendation systems shape what billions of people hear, watch,
+and read every day. Building one from scratch — even a small one — forces you to confront the
+design decisions that are usually hidden inside a black box: What features matter most? How do
+you weight them? What happens when the user's preferences contradict each other? VibeScore
+makes those decisions visible and debuggable.
 
-| Feature | Type | Description |
+---
+
+## Original Project (Modules 1–3)
+
+This project began in **Module 3** of the CodePath Applied AI course as a
+**Music Recommender Simulation**. The original goal was to represent songs and user taste
+profiles as structured data, design a point-based scoring rule to turn that data into ranked
+recommendations, and evaluate where the system succeeded and where it failed. The starter
+system awarded **+2.0 points for a genre match** and **+1.0 for energy similarity**, which
+prioritized categorical labels over continuous feel. This final project builds on that
+foundation by rebalancing the weights, adding adversarial evaluation profiles, and documenting
+the full system with tests, a model card, and this README.
+
+---
+
+## Architecture Overview
+
+The system is organized into four layers:
+
+```
+INPUT
+  data/songs.csv (28-song catalog)  +  User Profiles (3 standard + 4 adversarial)
+        |
+        v
+PROCESS
+  load_songs()       — reads CSV, casts numeric fields, returns list of dicts
+        |
+        v
+  score_song()       — applies 5-rule point formula to each song (max 5.0 pts)
+        |
+        v
+  recommend_songs()  — sorts all scored songs, returns top-k with explanations
+        |
+        v
+  main.py            — runs all 7 profiles end-to-end, formats output
+        |
+        v
+OUTPUT
+  Terminal: ranked songs with ASCII score bars and per-rule breakdowns
+
+TESTING & HUMAN REVIEW
+  tests/test_recommender.py  — automated checks (sort order, non-empty explanations)
+  Adversarial profiles       — human review of edge-case outputs
+```
+
+**Scoring rules — max 5.0 points per song:**
+
+| Rule | Points | Signal |
 |---|---|---|
-| `genre` | text | Broad musical category (rock, lofi, jazz, pop, …) |
-| `mood` | text | Emotional tone (happy, intense, chill, melancholy, …) |
-| `energy` | 0.0 – 1.0 | Physical intensity — high for metal/EDM, low for ambient/lofi |
-| `tempo_bpm` | number | Beats per minute (55 BPM lofi → 180 BPM metal) |
-| `valence` | 0.0 – 1.0 | Emotional positivity (1.0 = joyful, 0.0 = dark/tense) |
-| `danceability` | 0.0 – 1.0 | How suitable the track is for dancing |
-| `acousticness` | 0.0 – 1.0 | Acoustic warmth vs. electric/produced sound |
+| Genre match | +1.0 | Exact label match — defines the sonic category |
+| Mood match | +1.0 | Exact label match — the emotional character |
+| Energy similarity | up to +2.0 | `(1 − |target − actual|) × 2.0` — strongest continuous signal |
+| Acousticness similarity | up to +0.5 | Distance from user's warm/produced preference |
+| Tempo similarity | up to +0.5 | BPM gap normalized over 0–200 BPM |
 
-### User Profile
-
-The `UserProfile` stores a listener's taste targets:
-
-- `favorite_genre` — preferred genre label
-- `favorite_mood` — preferred mood label
-- `target_energy` — ideal energy level on the 0.0–1.0 scale
-- `likes_acoustic` — whether the user prefers acoustic or produced sounds
-
-The functional API in `main.py` extends this with `target_acousticness`, `target_tempo_bpm`, `target_valence`, and `target_danceability` for finer-grained matching.
-
-### Algorithm Recipe
-
-Every song in the catalog is scored against the user profile. Scores are summed, and the top-k songs are returned as recommendations.
-
-**Maximum possible score: 5.0 points**
-
-```
-+2.0 pts   Genre match
-           Strongest signal. Genre defines the sonic universe —
-           a rock fan hearing jazz feels like a wrong recommendation
-           regardless of other features.
-
-+1.0 pt    Mood match
-           Secondary label. "Happy rock" and "moody rock" share
-           production style but feel completely different.
-           Weighted at half of genre so it refines rather than overrides.
-
-+1.0 pt    Energy similarity   (continuous)
-           Formula: (1 - |target_energy - song_energy|) × 1.0
-           Best numeric discriminator. Separates "intense rock" (≈ 0.91)
-           from "chill lofi" (≈ 0.40) with a 0.51-point gap even when
-           genre and mood labels don't match.
-
-+0.5 pt    Acousticness similarity   (continuous)
-           Formula: (1 - |target_acousticness - song_acousticness|) × 0.5
-           Captures warm/unplugged vs. electric/produced texture.
-           Half-weight keeps it as a tie-breaker, not a primary driver.
-
-+0.5 pt    Tempo similarity   (continuous, normalised over 0–200 BPM)
-           Formula: (1 - |target_tempo - song_tempo| / 200) × 0.5
-           A 50-BPM gap costs ~0.125 pts — noticeable but not decisive.
-```
-
-Songs are ranked highest-score-first and the top 5 are shown by default.
-
-### Potential Biases
-
-- **Genre over-prioritization.** The +2.0 genre bonus dominates the score. A song that perfectly matches the user's energy, mood, acousticness, and tempo but belongs to a different genre will almost never outscore a weak genre match. Great cross-genre discoveries (e.g. a jazz track with rock-level energy) will be buried.
-
-- **Catalog representation.** The 28-song dataset skews toward Western genres. Genres like k-pop, latin, and reggae each have only one representative, so users whose favorite genre is underrepresented will receive lower-quality matches by default.
-
-- **Single-user design.** Every recommendation assumes one static taste profile. Real listening sessions shift by context (working, working out, relaxing), but the system treats the user as always wanting the same thing.
-
-- **No novelty or diversity.** The algorithm always picks the closest match. A user who slightly prefers "chill" moods will receive five nearly identical chill songs rather than a mix that might surface something new.
+The `Recommender` class and `UserProfile` data class in `src/recommender.py` provide a clean
+OOP interface used by the test suite. The functional `score_song` / `recommend_songs` API in
+the same file is used by `src/main.py` for full evaluation runs.
 
 ---
 
-## Getting Started
+## Setup Instructions
 
-### Setup
+**Requirements:** Python 3.9+
 
-1. Create a virtual environment (optional but recommended):
+**1. Clone the repository**
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+```bash
+git clone <your-repo-url>
+cd applied-ai-system-final
+```
 
-2. Install dependencies
+**2. Create and activate a virtual environment (recommended)**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate       # Mac / Linux
+.venv\Scripts\activate          # Windows
+```
+
+**3. Install dependencies**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the app:
+**4. Run the recommender**
 
 ```bash
 python -m src.main
 ```
 
-### Running Tests
+This runs all seven evaluation profiles (three standard + four adversarial) and prints ranked
+results with score bars and per-rule explanations to the terminal.
 
-Run the starter tests with:
+**5. Run the tests**
 
 ```bash
 pytest
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+---
+
+## Sample Interactions
+
+### Example 1 — High-Energy Pop (standard profile)
+
+**Input profile:**
+
+```
+genre=pop  mood=happy  energy=0.82  acousticness=0.15  tempo=122 BPM
+```
+
+**Output (top result):**
+
+```
+#1  Sunrise City
+    Neon Pulse  [pop / happy]
+    Score : 4.97 / 5.00  ████████████████████
+    Why   :
+      • genre match (+1.0)
+      • mood match (+1.0)
+      • energy similarity (+1.97)
+      • acousticness similarity (+0.50)
+      • tempo similarity (+0.50)
+```
+
+**What this shows:** When a user's preferences align with a song across all five dimensions,
+the scoring is both accurate and intuitive. "Sunrise City" earned a near-perfect score because
+it matched every signal simultaneously — this is the system working exactly as intended.
 
 ---
 
-## Experiments You Tried
+### Example 2 — Genre Ghost (adversarial profile)
 
-Use this section to document the experiments you ran. For example:
+**Input profile:**
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+```
+genre=opera  mood=peaceful  energy=0.25  acousticness=0.90  tempo=65 BPM
+```
+
+`opera` does not exist in the catalog, so the +1.0 genre bonus can never fire.
+
+**Output (top results):**
+
+```
+#1  Moonlight Reverie
+    Luna Strings  [classical / peaceful]
+    Score : 3.23 / 5.00  █████████████░░░░░░░
+    Why   :
+      • genre mismatch — song is classical (+0.0)
+      • mood match (+1.0)
+      • energy similarity (+1.87)
+      • acousticness similarity (+0.48)
+      • tempo similarity (+0.38)
+
+#2  Autumn Porch
+    Birch & Rain  [folk / peaceful]
+    Score : 3.10 / 5.00  ████████████░░░░░░░░
+```
+
+**What this shows:** When the user's preferred genre is missing from the catalog, the system
+degrades gracefully — falling back to continuous features and mood to surface genuinely
+adjacent results (quiet, acoustic, peaceful classical and folk). A missing label causes clean
+fallback. A contradictory label, as in Example 3, causes messier behavior.
 
 ---
 
-## Limitations and Risks
+### Example 3 — Sad Gym Beast (adversarial profile)
 
-Summarize some limitations of your recommender.
+**Input profile:**
 
-Examples:
+```
+genre=blues  mood=sad  energy=0.93  acousticness=0.10  tempo=150 BPM
+```
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+The mood/energy combination is deliberately contradictory — "sad" blues listeners expect slow,
+low-energy music, but the numeric targets point toward metal and EDM.
 
-You will go deeper on this in your model card.
+**Output (top result):**
+
+```
+#1  Rainy Day Blues
+    Muddy Creek  [blues / sad]
+    Score : 3.46 / 5.00  ██████████████░░░░░░
+    Why   :
+      • genre match (+1.0)
+      • mood match (+1.0)
+      • energy similarity (+0.07)
+      • acousticness similarity (+0.39)
+      • tempo similarity (+0.00)
+```
+
+**What this shows:** The genre + mood double-match (combined +2.0) outweighed the large energy
+gap, so the #1 result is technically correct by label but wrong by feel — a slow delta blues
+track is not what someone targeting energy=0.93 at 150 BPM would want at the gym. Slots #2–5
+then snap entirely to high-energy songs with no blues connection at all. This is the clearest
+demonstration of the core tension in the scoring design.
+
+---
+
+## Design Decisions
+
+**Why rule-based scoring instead of machine learning?**
+The goal was to build something fully transparent and debuggable. A neural model would perform
+better on a large dataset, but it would hide its reasoning. A rule-based system lets you see
+exactly why a song ranked where it did — which is essential for a learning project where the
+value comes from questioning the rules, not just accepting the output.
+
+**Why shift energy weight from +1.0 to +2.0 and genre from +2.0 to +1.0?**
+The original starter design gave genre a +2.0 bonus, which caused songs with completely wrong
+energy and mood to outrank better matches just because their genre label matched. A
+weight-shift experiment confirmed that doubling energy weight and halving genre weight made the
+system more sensitive to sonic feel. The trade-off: genre is now only a tie-breaker in many
+cases, so a pop fan might see more cross-genre results. That is an acceptable cost for a system
+where "it feels right" matters more than label correctness.
+
+**Why include adversarial profiles?**
+Standard profiles only confirm the system works under ideal conditions. Adversarial profiles
+expose how the system behaves at the edges — a genre that doesn't exist, all numeric targets
+at the ambiguous midpoint, or contradictory mood/energy signals. Real users are constantly
+at the edges. A Spotify user who wants opera is not unusual; they just get surfaced as an edge
+case when the catalog is small.
+
+**Known trade-offs:**
+
+- `target_danceability` and `target_valence` are collected in the user profile but silently
+  ignored by the scorer. This is the highest-priority future fix — wiring them in as +0.25
+  tie-breakers each would meaningfully extend the system without redesigning anything.
+- Exact string matching for genre and mood means "happy" never partially matches "playful."
+  Fuzzy mood grouping (a simple similarity table giving partial credit to adjacent moods)
+  would close this gap without any new data.
+- 23 of 25 genres in the catalog have exactly one song. Any user whose favorite genre falls
+  there gets only one genre-matching result; the remaining four slots are pure numeric
+  approximations of songs from completely different genres.
+
+---
+
+## Testing Summary
+
+**Automated tests** (`tests/test_recommender.py`) cover two things:
+
+1. **Sort order** — verifies that results are ordered highest score first and that the correct
+   song (pop / happy) ranks #1 for a pop / happy / high-energy user.
+2. **Explanation quality** — verifies that every recommendation comes with a non-empty,
+   human-readable explanation string.
+
+Both tests pass consistently and serve as a regression guard whenever scoring weights change.
+
+**What the tests do not cover:** semantic correctness. Automated tests can verify that results
+are sorted and explanations are non-empty, but they cannot check whether the #1 result actually
+sounds like what the user wants. That judgment requires human review — which is why the seven
+evaluation profiles in `main.py` exist alongside the automated suite.
+
+**Key findings from the evaluation runs:**
+
+- The **Fence-Sitter** profile (all numeric targets at 0.50, no genre/mood match) was designed
+  to produce near-ties. Instead, "Dusty Road Home" scored 4.77 while #2 scored only 2.81 —
+  a lucky catalog coincidence (country/nostalgic both exist) caused a decisive win despite
+  intentionally weak signal. The system can appear very confident even when it has almost no
+  real information.
+
+- The **weight-shift experiment** (genre +1.0, energy +2.0) caused Profile 1's #2–4 ranking
+  to shuffle significantly. Gym Hero dropped from #2 to #4, replaced by Disco Fever and
+  Rooftop Lights — songs with the right mood and energy but a different genre. Changing one
+  number changed the implicit claim about what matters most to the listener.
+
+- The **Genre Ghost** adversarial profile degraded more gracefully than the Sad Gym Beast
+  profile. A missing label causes clean fallback to continuous features. A contradictory label
+  (sad mood + 0.93 energy target) causes the system to hedge between two incompatible signals
+  and return a result that is technically correct but practically useless.
+
+- The **Deep Intense Rock** profile exposed the catalog depth problem clearly. Rock has only
+  one song, so "Storm Runner" scores 4.96 at #1 — but #2 through #5 are pop, punk, electronic,
+  and latin, ranked entirely by energy similarity with no genre connection whatsoever.
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+Building VibeScore 1.0 as part of the CodePath Applied AI course changed how I think about
+recommendation systems in two concrete ways.
 
-[**Model Card**](model_card.md)
+**Weights are design claims, not math facts.** When I changed genre weight from 2.0 to 1.0, I
+was not just adjusting a formula — I was making a statement that sonic feel matters more than
+a categorical label. The algorithm does not know which claim is true; it executes whatever I
+decided. Every real recommender system — Spotify, YouTube, Netflix — is full of decisions like
+that, most of them invisible to the user. Building one from scratch made those decisions
+visible and forced me to defend them out loud.
 
-Write 1 to 2 paragraphs here about what you learned:
+**"Intelligent" output can come from consistent data design, not real understanding.** When
+"Sunrise City" scored 4.97/5.00 for the High-Energy Pop profile, it felt like the system
+understood music. It did not. What happened was that the profile and the song were defined
+using the same vocabulary — same genre string, overlapping numeric ranges — so of course they
+aligned. The "intelligence" was careful data design. That distinction matters enormously when
+evaluating real AI systems: a model that performs perfectly in testing may be measuring its
+own consistency rather than genuine comprehension.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
-
----
-
-## 7. `model_card_template.md`
-
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
-
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
+The most important skill this project taught is knowing when to trust the output and when to
+go look at the code. The adversarial profiles exist precisely because a scoring function — or
+an AI model — can produce a confident-looking answer that is wrong in a way no automated test
+will catch. Human review is not a fallback for when the system fails. It is part of the
+system.
 
 ---
 
-## 3. How It Works (Short Explanation)
+## Extra Credit Features
 
-Describe your scoring logic in plain language.
+### Test Harness and Evaluation Script (+2 pts)
 
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
+`eval_harness.py` is a standalone evaluation script that runs the recommender against
+8 predefined test cases and prints a structured pass/fail summary with confidence scores.
 
-Try to avoid code in this section, treat it like an explanation to a non programmer.
+**Run it:**
 
----
+```bash
+python eval_harness.py
+```
 
-## 4. Data
+**Sample output:**
 
-Describe your dataset.
+```
+==============================================================
+  VIBESCORE 1.0 — EVALUATION HARNESS
+==============================================================
 
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
+  [PASS] (conf=0.99)  Test 1: Returns exactly k=5 results
+         returned 5 results as expected
 
----
+  [PASS] (conf=0.99)  Test 2: Scores are sorted descending
+         scores correctly sorted: [4.96, 3.91, 3.84, 3.72, 3.68]
 
-## 5. Strengths
+  [PASS] (conf=0.96)  Test 3: All scores within valid range
+         all scores within [0.0, 5.0]
 
-Where does your recommender work well
+  [PASS] (conf=0.99)  Test 4: Pop/happy profile: #1 result is a pop song
+         #1 is 'Sunrise City' (pop) — score 4.97
 
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
+  [PASS] (conf=0.98)  Test 5: Lofi/chill profile: #1 result is a lofi song
+         #1 is 'Library Rain' (lofi) — score 4.90
 
----
+  [PASS] (conf=0.99)  Test 6: Rock/intense profile: #1 result is a rock song
+         #1 is 'Storm Runner' (rock) — score 4.96
 
-## 6. Limitations and Bias
+  [PASS] (conf=0.65)  Test 7: Unknown genre: graceful fallback (no crash)
+         graceful fallback — 5 results returned, top score 3.23 (no genre bonus fired)
 
-Where does your recommender struggle
+  [PASS] (conf=0.74)  Test 8: All results have non-empty explanations
+         all 5 results have non-empty explanations
 
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
+--------------------------------------------------------------
+  Results : 8 / 8 passed
+  Avg confidence (top-result score / 5.0) : 0.911
+  Status  : ALL TESTS PASSED
+==============================================================
+```
 
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
+**What the confidence score means:** Each test reports the top-ranked song's score divided
+by 5.0 (the maximum possible). Tests 1–6 show confidence above 0.96 — the system is
+certain when genre and energy align. Test 7 (unknown genre) drops to 0.65, correctly
+signaling that the system is working from incomplete information.
 
 ---
 
-## 9. Personal Reflection
+### Fine-Tuning and Specialization (+2 pts)
 
-A few sentences about what you learned:
+The weight-shift experiment documents measurable behavioral change from a single parameter
+adjustment — the closest analog to fine-tuning in a rule-based system.
 
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
+**Baseline (original weights):** genre +2.0, energy +1.0
 
+**After specialization:** genre +1.0, energy +2.0
+
+**Measured impact on Profile 1 (High-Energy Pop):**
+
+| Rank | Baseline | After Weight Shift |
+|---|---|---|
+| #1 | Sunrise City (pop/happy) | Sunrise City (pop/happy) |
+| #2 | Gym Hero (pop/intense) | Disco Fever (disco/happy) |
+| #3 | Rooftop Lights (indie pop) | Rooftop Lights (indie pop) |
+| #4 | Disco Fever (disco/happy) | Gym Hero (pop/intense) |
+| #5 | Island Morning (reggae) | Island Morning (reggae) |
+
+Gym Hero dropped from #2 to #4. Disco Fever rose from #4 to #2 — not because it is a
+pop song (it is not), but because its energy value (0.87) is closer to the user's target
+(0.82) than Gym Hero's (0.93). The rebalancing made the system more sensitive to sonic
+feel and less dependent on genre label, which is the intended specialization.
+
+---
+
+### RAG Enhancement and Agentic Workflow (stretch goals)
+
+These two features were not implemented in this version but are documented here as the
+most natural next steps for extending the project.
+
+**RAG Enhancement:** The current system retrieves from a single 28-song flat CSV. A RAG
+extension would index songs by embedding their genre + mood + energy description as a
+vector, then retrieve the nearest neighbors using cosine similarity rather than a
+hand-written scoring formula. This would allow the system to work across a catalog of
+thousands of songs and surface matches the rule engine would never find.
+
+**Agentic Workflow:** A multi-step agent version would first ask clarifying questions
+("Are you working out or winding down?"), then select a scoring weight profile based on
+the answer, then run the recommender, and finally explain its chain of reasoning at each
+step. The intermediate steps — profile selection, weight choice, score computation —
+would be logged and visible in output rather than collapsed into a single ranked list.
+
+---
+
+## Project Structure
+
+```
+applied-ai-system-final/
+├── data/
+│   └── songs.csv               # 28-song catalog with 10 features per song
+├── src/
+│   ├── main.py                 # Evaluation runner — 3 standard + 4 adversarial profiles
+│   └── recommender.py          # Core logic: Song, UserProfile, Recommender, score_song
+├── tests/
+│   └── test_recommender.py     # Automated regression tests (pytest)
+├── eval_harness.py             # Test harness — 8 predefined test cases with pass/fail summary
+├── model_card.md               # Limitations, bias, ethics, and AI collaboration reflection
+└── requirements.txt
+```
+
+---
+
+## Portfolio Artifact
+
+**GitHub Repository:**
+[https://github.com/aldaneeeee/applied-ai-system-project](https://github.com/aldaneeeee/applied-ai-system-project)
+
+**What this project says about me as an AI engineer:**
+
+VibeScore 1.0 shows that I approach AI not as a black box to deploy, but as a system to
+understand, question, and honestly evaluate. I did not just build something that produces
+output. I built adversarial test cases designed to break it, ran a controlled experiment
+to measure how a single weight change shifted behavior, and documented the results including
+the moments where the system was wrong . I know how to distinguish between a
+model that performs well and a model that merely looks like it performs well, and I know
+that gap is where most real world AI failures live. I can write clean, testable code, think
+critically about bias and edge cases, and communicate technical decisions to an audience that
+was not in the room when those decisions were made. I am able to test, break, and rebuild a project. 
+
+---
+
+## About This Course
+
+This project was built as the final submission for the **CodePath Applied AI course** — a
+hands-on program that walks students through building, evaluating, and reflecting on
+AI-powered systems from the ground up. The course emphasizes not just making AI work, but
+understanding why it works, where it fails, and what human judgment is still required even
+when the output looks correct. This course taught me how to build off of AI rather than fully depending on it, using it as a tool to help clean and perfect my vision for a project.

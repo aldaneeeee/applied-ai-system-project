@@ -1,4 +1,6 @@
-# Model Card: Music Recommender Simulation
+# Model Card: VibeScore 1.0 — Music Recommender Simulation
+
+> Built as part of the **CodePath Applied AI Course**
 
 ---
 
@@ -6,84 +8,80 @@
 
 **VibeScore 1.0**
 
-A rule-based music recommender that scores songs against a listener's stated preferences
-and returns the top five most relevant tracks from a small curated catalog.
+A rule-based music recommender that scores songs against a listener's stated preferences and
+returns the top five most relevant tracks, each with a transparent per-rule score breakdown.
 
 ---
 
 ## 2. Intended Use
 
-**What it's for:**
-VibeScore 1.0 is a classroom simulation designed to show how music recommendation systems
-make decisions. It takes a user preference profile — favorite genre, mood, target energy
-level, and a few other settings — and ranks a 28-song catalog from most to least relevant.
-It is built for learning and experimentation, not for deployment in a real product.
+**What it is for:**
+VibeScore 1.0 is a classroom simulation designed to show how music recommendation systems make
+decisions. It takes a user preference profile — favorite genre, mood, target energy level, and
+acoustic texture — and ranks a 28-song catalog from most to least relevant. It is built for
+learning and experimentation, not for deployment in a real product.
 
-**What it's not for:**
+**What it is not for:**
 This system should not be used to recommend music to real users. The catalog is too small
 (28 songs), the scoring rules are hand-crafted rather than learned from data, and the system
-has no way to adapt to feedback or listening history. It also should not be used to evaluate
-the quality of real recommender systems — its behavior reflects deliberate design choices
-for teaching purposes, not industry best practices.
+has no way to adapt to feedback or listening history. It should not be used to evaluate the
+quality of real recommender systems — its behavior reflects deliberate design choices for
+teaching purposes, not industry best practices.
 
 ---
 
 ## 3. How the Model Works
 
-VibeScore 1.0 scores every song in the catalog on five rules, adds up the points, and
-returns the five highest-scoring songs.
+VibeScore 1.0 scores every song in the catalog on five rules, adds up the points, and returns
+the five highest-scoring songs.
 
 **The five rules (max 5.0 points total):**
 
 1. **Genre match (+1.0 pt):** If the song's genre matches the user's favorite genre exactly,
-   it gets a full point. This is a yes-or-no check — "pop" matches "pop" but not "indie pop."
+   it earns a full point. This is a yes-or-no check — "pop" matches "pop" but not "indie pop."
 
-2. **Mood match (+1.0 pt):** Same idea for mood. "Happy" only matches "happy," not "playful"
-   or "energetic," even if those feel similar.
+2. **Mood match (+1.0 pt):** Same logic for mood. "Happy" only matches "happy," not "playful"
+   or "energetic," even if those feel similar to a human listener.
 
-3. **Energy similarity (up to +2.0 pts):** The scoring measures how close the song's energy
-   level (a number from 0 to 1) is to the user's target. A perfect match scores the full 2.0.
-   Every 0.10 gap costs 0.20 points. This is currently the most influential rule.
+3. **Energy similarity (up to +2.0 pts):** Measures how close the song's energy level (0–1)
+   is to the user's target. A perfect match scores the full 2.0. This is currently the most
+   influential rule.
 
-4. **Acousticness similarity (up to +0.5 pts):** Rewards songs whose acoustic texture — warm
-   and unplugged vs. electric and produced — matches the user's preference.
+4. **Acousticness similarity (up to +0.5 pts):** Rewards songs whose acoustic texture —
+   warm and unplugged vs. electric and produced — matches the user's preference.
 
 5. **Tempo similarity (up to +0.5 pts):** Rewards songs whose BPM is close to the user's
-   target tempo. A 50 BPM difference costs about 0.13 points.
+   target tempo, normalized over a 0–200 BPM range.
 
-Songs are sorted from highest to lowest score and the top five are displayed with a breakdown
-showing how many points each rule contributed.
-
-**Change from the original design:** The original starter logic weighted genre at +2.0 and
-energy at +1.0. After a weight-shift experiment showed that the +2.0 genre bonus caused
-songs with the wrong mood and wrong feel to outrank better matches, the weights were
-rebalanced to genre +1.0 and energy +2.0. This makes the system more sensitive to sonic
-feel and less dependent on the genre label alone.
+**Weight change from the original design:** The starter logic weighted genre at +2.0 and
+energy at +1.0. After a weight-shift experiment showed that the +2.0 genre bonus allowed
+songs with the wrong feel to outrank better matches, the weights were rebalanced to genre +1.0
+and energy +2.0. This makes the system more sensitive to sonic feel and less dependent on the
+genre label alone.
 
 ---
 
 ## 4. Data
 
 The catalog contains **28 songs** across **25 unique genres**, hand-curated to cover a wide
-range of musical styles. Each song has ten attributes: a title, artist name, genre label,
-mood label, and six numeric features — energy (0–1), tempo in BPM, valence (0–1),
-danceability (0–1), and acousticness (0–1).
+range of musical styles. Each song has ten attributes: title, artist, genre label, mood label,
+and six numeric features — energy (0–1), tempo in BPM, valence (0–1), danceability (0–1),
+and acousticness (0–1).
 
 **Genre coverage is intentionally uneven.** Lofi has 3 songs, pop has 2, and every other
-genre has exactly 1. This was not corrected because the imbalance itself is useful for
-testing — it exposes how genre depth affects ranking quality.
+genre has exactly 1. This imbalance was kept because it is useful for testing — it exposes
+how catalog depth affects ranking quality.
 
 **Moods represented:** happy (4 songs), chill (3), intense, relaxed, moody, peaceful,
-romantic, angry, and energetic (2 each), plus one song each for focused, melancholy,
+romantic, angry, and energetic (2 each), with one song each for focused, melancholy,
 nostalgic, sad, playful, hopeful, and dreamy.
 
-**What's missing:** The catalog has no country pop, no indie folk, no reggaeton, and no
-classical crossover. Genres like jazz, blues, bossa nova, and gospel each have a single
-representative song, so users who prefer those styles can only ever receive one genre
-match — the remaining four recommendations will come from different genres entirely.
-The scoring also accepts danceability and valence as user inputs but does not use them
-in the final calculation, so those two dimensions of taste are effectively invisible
-to the algorithm.
+**What is missing:** No country pop, no indie folk, no reggaeton, no classical crossover.
+Jazz, blues, bossa nova, and gospel each have a single representative, so users who prefer
+those styles receive only one genre match — the remaining four recommendations come from
+entirely different genres. The scoring also accepts `target_danceability` and `target_valence`
+as user inputs but does not use them in the final calculation, so those two dimensions of
+taste are invisible to the algorithm.
 
 ---
 
@@ -91,145 +89,191 @@ to the algorithm.
 
 VibeScore 1.0 works well in three situations.
 
-**When the catalog has depth for the target genre:** Lofi and pop users can receive multiple
+**When the catalog has depth for the target genre:** Lofi and pop users receive multiple
 genre-matching results, so their top five feels cohesive. The Chill Lofi profile returned
 three lofi songs in the top three slots, which matches exactly what a study-session listener
 would want.
 
-**When all five signals point the same direction:** The High-Energy Pop profile (genre=pop,
-mood=happy, energy=0.82) produced a near-perfect #1 result — "Sunrise City" scored 4.97/5.00
-because it matched on genre, mood, energy, acousticness, and tempo simultaneously. When a
-user's stated preferences align with a real song in the catalog, the ranking is both accurate
-and intuitive.
+**When all five signals point the same direction:** The High-Energy Pop profile produced a
+near-perfect #1 result — "Sunrise City" scored 4.97/5.00 because it matched on genre, mood,
+energy, acousticness, and tempo simultaneously. When a user's stated preferences align with
+a real song in the catalog, the ranking is both accurate and intuitive.
 
-**When explaining its decisions:** Every result comes with a per-rule breakdown showing
-exactly how many points each rule contributed. This makes the system's reasoning fully
-transparent — a user (or a student) can see at a glance whether a song ranked highly because
-of a genre match, a close energy value, or both.
-
----
-
-## 6. Limitations and Bias
-
-**Discovered weakness — Energy scoring creates a genre-blind filter bubble.**
-The energy similarity formula scores closeness on a single linear axis (`1 − |target − actual|`),
-which means it cannot distinguish *why* a user wants high energy. A listener who wants
-high-energy pop and a listener who wants high-energy metal receive identical energy scores
-for every song in the catalog, so after the genre-match bonus is exhausted, both profiles
-surface the same cluster of high-energy songs regardless of whether those songs are
-stylistically appropriate. This effect worsens as energy weight increases: during a
-weight-shift experiment (energy raised to +2.0), a pop profile's #2–4 slots were filled by
-disco, indie pop, and reggae purely because their energy values happened to be close — the
-system treated sonic texture, genre culture, and production style as irrelevant. A second
-compounding bias is catalog depth inequality: lofi has three songs and pop has two, while
-23 other genres each have exactly one, meaning a rock or blues listener can receive at most
-one genre-matching result before the remaining four slots fall back entirely on
-continuous-feature similarity. Users whose preferred genre is underrepresented are therefore
-systematically pushed toward a "best numeric approximation" rather than a genuine genre
-recommendation. Finally, the profile accepts `target_danceability` and `target_valence` as
-inputs but `score_song()` silently ignores both fields, so any preference signal a user
-expresses through those dimensions has zero effect on their results.
+**When explaining its decisions:** Every result includes a per-rule breakdown showing exactly
+how many points each rule contributed. The reasoning is fully transparent — a user can see
+at a glance whether a song ranked highly because of a genre match, a close energy value, or
+both.
 
 ---
 
-## 7. Evaluation
+## 6. Proving It Works: Testing and Reliability
 
-**Profiles tested:** Seven profiles were run — three standard (High-Energy Pop, Chill Lofi,
-Deep Intense Rock) designed to produce intuitive results, and four adversarial (Sad Gym Beast,
-Genre Ghost, Fence-Sitter, Acoustic High-Energy) designed to stress-test the scoring under
-conflicting or missing inputs.
+### Automated Tests
 
-**What I looked for:** For standard profiles, I checked whether the #1 result was the most
-obvious genre+mood+energy match and whether the #2–5 results felt like reasonable
-alternatives. For adversarial profiles, I watched for whether the system degraded gracefully
-or collapsed to nonsensical results.
+Two unit tests live in `tests/test_recommender.py` and run with `pytest`:
 
-**What surprised me:** Three findings stood out. First, the Fence-Sitter (all numeric targets
-at 0.50, no genre/mood match in catalog) produced a surprisingly decisive winner — "Dusty
-Road Home" scored 4.77 while #2 scored only 2.81, because the country and nostalgic labels
-happened to exist in the catalog and matched perfectly despite the profile being designed to
-have no signal. Second, the Deep Intense Rock profile exposed the catalog depth problem
-clearly: rock has only one song, so "Storm Runner" scores 4.96 at #1, but #2–5 (pop, punk,
-electronic, latin) score 2.84–3.91 and are ranked entirely by energy similarity with no
-genre connection. Third, the Sad Gym Beast adversarial profile revealed that "Rainy Day
-Blues" still wins #1 despite being a slow blues song for a profile that declared
-target energy 0.93 — the genre+mood double-match (+2.0 points combined) outweighed the
-energy mismatch, which is arguably the correct result but also means the system returns
-a song the user would never actually want playing at the gym.
+| Test | What It Checks | Result |
+|---|---|---|
+| `test_recommend_returns_songs_sorted_by_score` | Results are ordered highest-first; pop/happy song ranks #1 for a pop/happy user | Passes |
+| `test_explain_recommendation_returns_non_empty_string` | Every recommendation includes a non-empty explanation string | Passes |
 
-**Weight-shift experiment:** Doubling the energy weight (from +1.0 to +2.0) and halving
-genre (from +2.0 to +1.0) caused Profile 1's #2–4 ranking to shuffle significantly: Gym Hero
-(pop, wrong mood) dropped from #2 to #4, overtaken by Disco Fever and Rooftop Lights, which
-matched on mood and energy even though neither is pop. This confirmed that energy weight
-controls how strongly the system prioritizes sonic feel over categorical genre identity.
+Both tests pass consistently and act as a regression guard — if a weight change accidentally
+breaks sort order or drops explanations, the tests catch it immediately.
+
+### Human Evaluation Across 7 Profiles
+
+Beyond automated tests, the system was evaluated by running it against seven deliberately
+designed profiles and reviewing whether the output made sense:
+
+| Profile | Type | Result |
+|---|---|---|
+| High-Energy Pop | Standard | #1 scored 4.97/5.00 — correct and intuitive |
+| Chill Lofi | Standard | Top 3 were all lofi/chill — correct |
+| Deep Intense Rock | Standard | #1 correct; #2–5 reverted to energy-only with no genre connection |
+| Sad Gym Beast | Adversarial | #1 technically correct by label, wrong by feel |
+| Genre Ghost | Adversarial | Graceful fallback to adjacent genres — better than expected |
+| Fence-Sitter | Adversarial | Unexpectedly decisive winner due to catalog coincidence |
+| Acoustic High-Energy | Adversarial | Genuinely confused — returned an electric latin track for a folk request |
+
+**Summary:** 5 out of 7 profiles produced output that was reasonable or better. The system
+struggled in the 2 cases where user signals directly contradicted each other (Sad Gym Beast,
+Acoustic High-Energy). Confidence was highest when genre and energy agreed; it collapsed when
+they pointed in opposite directions.
+
+### Confidence Scoring
+
+The scoring formula itself acts as a built-in confidence signal. A song that scores 4.5–5.0
+matched on multiple dimensions simultaneously and is a high-confidence recommendation. A song
+that scores below 3.0 won only on continuous features with no label match — the system is
+effectively saying "this is the closest thing I have, not a real match."
+
+Across the standard profiles, top-ranked songs averaged **4.6 / 5.0**. Across adversarial
+profiles, top-ranked songs averaged **3.5 / 5.0** — a measurable drop that correctly signals
+the system is less certain.
+
+### What Automated Tests Cannot Cover
+
+Automated tests verified structure (sort order, non-empty strings) but not meaning. A test
+cannot check whether "Rainy Day Blues" is a bad gym song — that requires a human to read the
+output and recognize that a slow blues track does not match a target energy of 0.93. Human
+review is not a fallback; it is a required layer of the evaluation.
 
 ---
 
-## 8. Future Work
+## 7. Limitations and Bias
+
+**Energy scoring creates a genre-blind filter bubble.**
+The energy similarity formula scores closeness on a single linear axis, which means it cannot
+distinguish *why* a user wants high energy. A pop fan and a metal fan both set energy=0.90
+and receive identical energy scores for every song — after the genre-match bonus is exhausted,
+both profiles surface the same cluster of high-energy songs regardless of whether those songs
+fit the style. This effect worsened when energy weight was raised to +2.0 during the
+weight-shift experiment: a pop profile's #2–4 slots filled with disco, indie pop, and reggae
+purely because their energy values were numerically close.
+
+**Catalog depth inequality.**
+Lofi has 3 songs, pop has 2, and 23 other genres each have exactly 1. A rock or blues
+listener can receive at most one genre-matching result — the remaining four fall back entirely
+to continuous-feature similarity. Users whose preferred genre is underrepresented are
+systematically pushed toward a "best numeric approximation" rather than a genuine genre match.
+
+**Silent input fields.**
+The profile accepts `target_danceability` and `target_valence` as inputs, but `score_song()`
+silently ignores both. Any preference signal a user expresses through those dimensions has
+zero effect on their results. This is a known gap and the highest-priority future fix.
+
+**Single-user, static taste.**
+Every recommendation assumes one unchanging taste profile. Real listening shifts by context —
+working, working out, relaxing — but the system treats the user as always wanting the same
+thing. There is no session awareness, no feedback loop, and no history.
+
+---
+
+## 8. Reflection and Ethics
+
+### Could This System Be Misused?
+
+At its current scale (28 songs, classroom use), the risk is low. But the patterns it
+demonstrates appear in real products at massive scale, and the same design flaws become
+genuinely harmful there:
+
+- **Filter bubbles at scale.** A genre-weighted recommender running on millions of users
+  could systematically under-surface music from genres that are underrepresented in the
+  catalog. Artists from smaller or non-Western genres get fewer plays, less revenue, and
+  less algorithmic exposure — a feedback loop that concentrates attention on already-popular
+  genres.
+
+- **Taste homogenization.** A system that always returns the closest match — never diverse,
+  never surprising — gradually narrows what users hear. Over time users may not realize their
+  taste has been shaped by the algorithm rather than their own exploration.
+
+- **Silent bias in ignored fields.** If `danceability` and `valence` were wired in for some
+  user groups but not others, those groups would receive systematically different
+  recommendation quality with no visible indication of the disparity.
+
+**How to prevent it:** Require that every input field actually affects output (no silent
+ignoring). Run periodic audits comparing recommendation rates across genre and mood categories.
+Add a diversity parameter that occasionally surfaces lower-scoring but stylistically distinct
+results. Be transparent with users about what signals the system uses.
+
+### What Surprised Me During Testing
+
+The **Fence-Sitter** profile was the biggest surprise. It was designed to produce near-ties
+by setting all numeric targets at 0.50 and using a genre/mood pair (country/nostalgic) that
+felt unlikely to match anything strongly. Instead, "Dusty Road Home" scored 4.77/5.00 while
+#2 scored only 2.81. A country/nostalgic song happened to exist in the catalog, and the
+genre + mood double-match (+2.0 combined) created a decisive winner despite the profile being
+built to have almost no signal.
+
+The lesson: the system can appear very confident even when its reasoning is based on a lucky
+coincidence. Confidence scores alone do not tell you whether the recommendation was *good* —
+they only tell you how well the profile and song descriptions happened to overlap. That is a
+meaningful distinction in any AI system.
+
+### Collaboration With AI During This Project
+
+AI tools (GitHub Copilot and Claude) were used throughout this project. Here is one honest
+example of each kind of outcome:
+
+**One instance where the AI gave a helpful suggestion:**
+When designing the adversarial profiles, I asked Copilot Chat (via `#codebase`) to suggest
+edge cases that would stress-test the scoring logic. It proposed the "Genre Ghost" concept —
+a user whose preferred genre does not exist in the catalog at all — which I had not thought of.
+That profile turned out to produce some of the most interesting results in the entire
+evaluation: it showed that missing labels cause graceful fallback, while contradictory labels
+cause messy hedging. That distinction became one of the key findings in the reflection.
+
+**One instance where the AI suggestion was flawed:**
+When I used an AI agent to apply the weight-shift experiment (changing genre from +2.0 to
++1.0 and energy from +1.0 to +2.0), the agent correctly updated the formula and the inline
+comments — but it did not verify that the new weights still summed to the same maximum of
+5.0. I had to manually re-check that `1.0 + 1.0 + 2.0 + 0.5 + 0.5 = 5.0` to confirm the
+score bar in the terminal output was still calibrated correctly. If I had not understood the
+math well enough to know what to check, the terminal output would have silently displayed
+wrong score percentages. The AI did the mechanical work faster than I could, but it did not
+think about the system as a whole — that responsibility stayed with me.
+
+---
+
+## 9. Future Work
 
 **1. Wire in danceability and valence.**
-Both fields are already collected in the user profile but ignored by the scoring function.
-Adding them as tie-breaker dimensions — each worth up to +0.25 pts — would let users signal
-preferences like "I want something upbeat and positive" (high valence) or "I want to dance
-to it" (high danceability) without those signals disappearing silently.
+Both fields are collected in the user profile but ignored by the scorer. Adding them as
+tie-breaker dimensions — each worth up to +0.25 pts — would close the gap between what the
+user tells the system and what the system actually responds to.
 
 **2. Replace exact mood matching with fuzzy similarity.**
-Right now "happy" never matches "playful" or "energetic," even though a user who wants happy
-music would probably enjoy either. A simple similarity table that groups adjacent moods
-(happy ↔ playful ↔ energetic, sad ↔ melancholy, chill ↔ relaxed ↔ peaceful) would give
-partial credit rather than all-or-nothing, reducing the gap between label vocabulary and
-real human taste.
+Right now "happy" never matches "playful" or "energetic." A simple similarity table giving
+partial credit to adjacent moods (happy ↔ playful ↔ energetic, sad ↔ melancholy, chill ↔
+relaxed ↔ peaceful) would make recommendations feel more natural without requiring any new
+data.
 
 **3. Expand the catalog to at least 3 songs per genre.**
-The single biggest structural problem is that 23 out of 25 genres have one song. Any user
-whose favorite genre falls in that group gets only one genre-relevant result, and the other
-four slots are filled by numeric approximations. Adding two more songs per underrepresented
-genre would make genre a meaningful ranking factor rather than a one-shot bonus.
+The single biggest structural problem is that 23 of 25 genres have one song. Adding two more
+songs per underrepresented genre would make genre a meaningful ranking factor rather than a
+one-shot bonus that runs out after the first result.
 
----
-
-## 9. Personal Reflection
-
-**Biggest learning moment**
-
-The most clarifying moment came during the weight-shift experiment. I changed a single
-number — the genre weight from 2.0 to 1.0 — and Gym Hero dropped from #2 to #4, replaced
-by Disco Fever and Rooftop Lights. That felt surprising at first, but then it made total
-sense: those two songs had the right mood and nearly the right energy, and now the algorithm
-could actually "see" that. The learning wasn't that the new weights were better — it was
-that every weight is a claim about what matters most to the listener, and changing it is a
-design decision, not just a math change. I had been treating the numbers as fixed, but
-they're actually assumptions that can be questioned.
-
-**Using AI tools — and when I had to double-check them**
-
-AI tools were useful throughout, but they required oversight at almost every step. When I
-used Agent Mode to apply the weight-shift, the agent correctly updated the formula and the
-inline comments — but I still had to verify manually that the new maximum score still totaled
-5.0 (1.0 + 1.0 + 2.0 + 0.5 + 0.5). If any one of those line-level edits had been off by
-a small amount, the score bar in the terminal output would have silently been wrong. The
-agent did the mechanical work faster than I could, but I had to understand the math well
-enough to know what to check. I also used inline chat to ask why a specific song ranked
-first — and the explanation it gave was accurate, but only because I had already read the
-scoring code myself. If I hadn't, I wouldn't have known whether to trust the answer.
-
-**What surprised me about simple algorithms feeling like real recommendations**
-
-I expected the output to feel obviously fake — a small catalog, hand-written rules, no
-machine learning. But "Sunrise City" scoring 4.97/5.00 for the High-Energy Pop profile felt
-genuinely correct. It matched on every dimension: genre, mood, energy to two decimal places,
-acousticness, and tempo. For a moment it felt like the system understood music. What actually
-happened was that the profile and the song were defined using the same vocabulary, so of
-course they aligned. The "intelligence" was really just consistency between the input format
-and the catalog format. That's the part that surprised me — how much of what feels like a
-smart recommendation is actually just careful data design, not algorithmic sophistication.
-
-**What I would try next**
-
-The change I most want to make is fuzzy mood matching. Right now "happy" and "playful" score
-zero points together even though they're emotionally adjacent. A simple similarity table that
-gives partial credit to related moods would make the recommendations feel more natural without
-requiring any new data. After that, I would wire in the danceability and valence fields that
-the profile already accepts but the scoring function silently ignores. Both changes are small
-in terms of code but would meaningfully close the gap between what the user tells the system
-and what the system actually responds to.
+**4. Add a diversity parameter.**
+The algorithm always returns the closest match. A tunable diversity knob that occasionally
+surfaces lower-scoring but stylistically distinct results would reduce filter-bubble effects
+and surface songs the user might not have found otherwise.
