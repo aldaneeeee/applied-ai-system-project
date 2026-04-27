@@ -11,10 +11,7 @@ curated catalog against a listener's stated preferences and returns the top five
 tracks — with a transparent, per-rule explanation of why each song ranked where it did.
 
 This project matters because recommendation systems shape what billions of people hear, watch,
-and read every day. Building one from scratch — even a small one — forces you to confront the
-design decisions that are usually hidden inside a black box: What features matter most? How do
-you weight them? What happens when the user's preferences contradict each other? VibeScore
-makes those decisions visible and debuggable.
+and read every day.It's literally what builds our algorithm and part of out digital profile. Building one forces you to confront the design decisions that are usually hidden inside a black box: What features matter most? How do you weight them? What happens when the user's preferences contradict each other? VibeScore 1.0 makes those decisions visible and debuggable.
 
 ---
 
@@ -164,7 +161,7 @@ genre=opera  mood=peaceful  energy=0.25  acousticness=0.90  tempo=65 BPM
 ```
 #1  Moonlight Reverie
     Luna Strings  [classical / peaceful]
-    Score : 3.23 / 5.00  █████████████░░░░░░░
+    Score : 3.23 / 5.00 
     Why   :
       • genre mismatch — song is classical (+0.0)
       • mood match (+1.0)
@@ -174,7 +171,7 @@ genre=opera  mood=peaceful  energy=0.25  acousticness=0.90  tempo=65 BPM
 
 #2  Autumn Porch
     Birch & Rain  [folk / peaceful]
-    Score : 3.10 / 5.00  ████████████░░░░░░░░
+    Score : 3.10 / 5.00 
 ```
 
 **What this shows:** When the user's preferred genre is missing from the catalog, the system
@@ -200,7 +197,7 @@ low-energy music, but the numeric targets point toward metal and EDM.
 ```
 #1  Rainy Day Blues
     Muddy Creek  [blues / sad]
-    Score : 3.46 / 5.00  ██████████████░░░░░░
+    Score : 3.46 / 5.00 
     Why   :
       • genre match (+1.0)
       • mood match (+1.0)
@@ -299,10 +296,10 @@ evaluation profiles in `main.py` exist alongside the automated suite.
 Building VibeScore 1.0 as part of the CodePath Applied AI course changed how I think about
 recommendation systems in two concrete ways.
 
-**Weights are design claims, not math facts.** When I changed genre weight from 2.0 to 1.0, I
+**Weights are design claims,it's neither random nor math facts.** When I changed genre weight from 2.0 to 1.0, I
 was not just adjusting a formula — I was making a statement that sonic feel matters more than
 a categorical label. The algorithm does not know which claim is true; it executes whatever I
-decided. Every real recommender system — Spotify, YouTube, Netflix — is full of decisions like
+decided. Every real recommender system — Spotify, YouTube, Netflix, ect — is full of decisions like
 that, most of them invisible to the user. Building one from scratch made those decisions
 visible and forced me to defend them out loud.
 
@@ -315,10 +312,7 @@ evaluating real AI systems: a model that performs perfectly in testing may be me
 own consistency rather than genuine comprehension.
 
 The most important skill this project taught is knowing when to trust the output and when to
-go look at the code. The adversarial profiles exist precisely because a scoring function — or
-an AI model — can produce a confident-looking answer that is wrong in a way no automated test
-will catch. Human review is not a fallback for when the system fails. It is part of the
-system.
+go look at the code. This is a critical part of the project to know when to trust the output and when to go review the code because you catch that the output is slightly inaccurate. Human review is not a fallback for when the system fails. It is part of the system and process.
 
 ---
 
@@ -465,7 +459,7 @@ was not in the room when those decisions were made. I am able to test, break, an
 ## About This Course
 
 This project was built as the final submission for the **CodePath Applied AI course** — a
-hands-on program that walks students through building, evaluating, and reflecting on
+hands on program that walks students through building, evaluating, and reflecting on
 AI-powered systems from the ground up. The course emphasizes not just making AI work, but
 understanding why it works, where it fails, and what human judgment is still required even
 when the output looks correct. This course taught me how to build off of AI rather than fully depending on it, using it as a tool to help clean and perfect my vision for a project.
